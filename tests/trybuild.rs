@@ -1,3 +1,5 @@
+use std::env;
+
 extern crate trybuild;
 
 fn main() {
@@ -10,11 +12,16 @@ fn main() {
         );
     }
 
-    if rust_ver.is_none() || rust_ver == Some("stable") {
-        t.compile_fail("tests/compile-fail/*.rs");
+    let args: Vec<String> = env::args().collect();
+    if args.len() > 1 {
+        t.compile_fail(format!("tests/compile-fail/*{}*.rs", args[1]));
     } else {
-        println!("Skipping compile-fail tests.");
-    }
+        if rust_ver.is_none() || rust_ver == Some("stable") {
+            t.compile_fail("tests/compile-fail/*.rs");
+        } else {
+            println!("Skipping compile-fail tests.");
+        }
 
-    t.pass("tests/run-pass/*.rs");
+        t.pass("tests/run-pass/*.rs");
+    }
 }
