@@ -94,13 +94,17 @@ impl<'a> LeftRecursionVisitor<'a> {
                     .iter()
                     .position(|caller_name| caller_name == &name)
                 {
-                    let mut recursive_loop = self.stack[loop_start..].to_vec();
-                    recursive_loop.push(name);
-                    self.errors.push(LeftRecursionError {
-                        path: recursive_loop,
-                        span: rule_ident.span(),
-                    });
-                    return false;
+                    if let Some(rule) = self.rules.get(&name) {
+                        let mut recursive_loop = self.stack[loop_start..].to_vec();
+                        recursive_loop.push(name.clone());
+                        if !rule.cached {
+                            self.errors.push(LeftRecursionError {
+                                path: recursive_loop,
+                                span: rule_ident.span(),
+                            });
+                        }
+                        return true;
+                    }
                 }
 
                 if let Some(rule) = self.rules.get(&name) {
