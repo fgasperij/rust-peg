@@ -2115,17 +2115,14 @@ pub mod peg {
             }
         }
     }
-    fn __parse_primary<'input>(
+    fn __parse_primary_not_cached<'input>(
         __input: &'input Input,
         __state: &mut ParseState<'input>,
         __err_state: &mut ::peg::error::ErrorState,
         __pos: usize,
     ) -> ::peg::RuleResult<SpannedExpr> {
         #![allow(non_snake_case, unused)]
-        if let Some(entry) = __state.primary_cache.get(&__pos) {
-            return entry.clone();
-        }
-        let __rule_result = {
+        {
             let __choice_res = {
                 let __seq_res = __parse_sp(__input, __state, __err_state, __pos);
                 match __seq_res {
@@ -2417,9 +2414,45 @@ pub mod peg {
                     }
                 }
             }
-        };
-        __state.primary_cache.insert(__pos, __rule_result.clone());
-        __rule_result
+        }
+    }
+    fn __parse_primary<'input>(
+        __input: &'input Input,
+        __state: &mut ParseState<'input>,
+        __err_state: &mut ::peg::error::ErrorState,
+        __pos: usize,
+    ) -> ::peg::RuleResult<SpannedExpr> {
+        #![allow(non_snake_case, unused)]
+        if let Some(entry) = __state.primary_cache.get(&__pos) {
+            return entry.clone();
+        }
+        __state
+            .primary_cache
+            .insert(__pos, ::peg::RuleResult::Failed);
+        let mut __last_result = ::peg::RuleResult::Failed;
+        loop {
+            let __current_result = __parse_primary_not_cached(__input, __state, __err_state, __pos);
+            if let ::peg::RuleResult::Matched(__current_endpos, _) = __current_result {
+                if let ::peg::RuleResult::Matched(__last_endpos, _) = __last_result {
+                    if __current_endpos > __last_endpos {
+                        __state
+                            .primary_cache
+                            .insert(__pos, __current_result.clone());
+                        __last_result = __current_result;
+                    } else {
+                        break;
+                    }
+                } else {
+                    __state
+                        .primary_cache
+                        .insert(__pos, __current_result.clone());
+                    __last_result = __current_result;
+                }
+            } else {
+                break;
+            }
+        }
+        return __last_result;
     }
     fn __parse_rule_arg<'input>(
         __input: &'input Input,

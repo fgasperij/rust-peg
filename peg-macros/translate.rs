@@ -249,16 +249,43 @@ fn compile_rule(context: &Context, rule: &Rule) -> TokenStream {
             quote!()
         };
 
+        let not_cached_name = format_ident!("{}_not_cached", name);
         quote_spanned! { span =>
+            fn #not_cached_name<'input #(, #extra_ty_params)* #(, #ty_params)*>(__input: &'input Input<#(#extra_ty_params),*>, __state: &mut ParseState<'input>, __err_state: &mut ::peg::error::ErrorState, __pos: usize #extra_args_def #(, #rule_params)*) -> ::peg::RuleResult<#ret_ty> {
+                #![allow(non_snake_case, unused)]
+                #wrapped_body
+            }
+
             fn #name<'input #(, #extra_ty_params)* #(, #ty_params)*>(__input: &'input Input<#(#extra_ty_params),*>, __state: &mut ParseState<'input>, __err_state: &mut ::peg::error::ErrorState, __pos: usize #extra_args_def #(, #rule_params)*) -> ::peg::RuleResult<#ret_ty> {
                 #![allow(non_snake_case, unused)]
                 if let Some(entry) = __state.#cache_field.get(&__pos) {
                     #cache_trace
                     return entry.clone();
                 }
-                let __rule_result = #wrapped_body;
-                __state.#cache_field.insert(__pos, __rule_result.clone());
-                __rule_result
+
+                __state.#cache_field.insert(__pos, ::peg::RuleResult::Failed);
+                let mut __last_result = ::peg::RuleResult::Failed;
+                loop {
+                    let __current_result = #not_cached_name(__input, __state, __err_state, __pos);
+                    if let ::peg::RuleResult::Matched(__current_endpos, _) = __current_result {
+                        if let ::peg::RuleResult::Matched(__last_endpos, _) = __last_result {
+                            if __current_endpos > __last_endpos {
+                                __state.#cache_field.insert(__pos, __current_result.clone());
+                                __last_result = __current_result;
+                            } else {
+                                break;
+                            }
+                        } else {
+                            __state.#cache_field.insert(__pos, __current_result.clone());
+                            __last_result = __current_result;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+
+                return __last_result;
+
             }
         }
     } else {

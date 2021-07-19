@@ -3,3 +3,19 @@ error: rules with arguments cannot use #[cache]
   |
 5 |     rule foo(x: u32) = "foo" //~ ERROR
   |          ^^^
+
+error[E0061]: this function takes 5 arguments but 4 arguments were supplied
+ --> $DIR/cache_with_args.rs:5:5
+  |
+5 |     rule foo(x: u32) = "foo" //~ ERROR
+  |     ^^^^
+  |     |
+  |     supplied 4 arguments
+  |     expected 5 arguments
+  |
+note: function defined here
+ --> $DIR/cache_with_args.rs:5:5
+  |
+5 |     rule foo(x: u32) = "foo" //~ ERROR
+  |     -^^^-----
+  = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)
